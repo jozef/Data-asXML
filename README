@@ -1,0 +1,92 @@
+NAME
+    Data::asXML - convert data structures to/from XML
+
+SYNOPSIS
+        my $dxml = Data::asXML->new();
+        my $dom = $dxml->encode({
+            'some' => 'value',
+            'in'   => [ qw(a data structure) ],
+        });
+
+        # not implemented jet
+        my $data = $dxml->decode(q{
+            <HASH>
+                <KEY name="some">value</KEY>
+                <KEY name="in">
+                    <ARRAY>
+                        <VALUE>a</VALUE>
+                        <VALUE>data</VALUE>
+                        <VALUE>structure</VALUE>
+                    </ARRAY>
+                </KEY>
+            </HASH>
+        });
+
+    For more examples see t/01_Data-asXML.t.
+
+WARNING
+    experimental, use on your own risk :-)
+
+DESCRIPTION
+    There are couple of modules mapping XML to data structures.
+    (XML::Compile, XML::TreePP, XML::Simple, ...) but they aim at making
+    data structures adapt to XML structure. This defines simple XML tags to
+    represent data structures. It makes the serialization to (later also
+    from) XML possible. For the moment it is an experiment. I plan to use it
+    for passing data structures to XSLT for transformations.
+
+PROPERTIES
+    pretty
+        (default 1) will insert text nodes to the XML to make the output
+        indented.
+
+METHODS
+  new()
+    Object constructor.
+
+  encode($what)
+    From structure `$what' generates XML::LibXML::Document DOM. Call
+    `->toString' to get XML string. For more actions see XML::LibXML.
+
+  decode
+    Not implemented jet.
+
+AUTHOR
+    Jozef Kutej, `<jkutej at cpan.org>'
+
+BUGS
+    Please report any bugs or feature requests to `bug-data-asxml at
+    rt.cpan.org', or through the web interface at
+    http://rt.cpan.org/NoAuth/ReportBug.html?Queue=Data-asXML. I will be
+    notified, and then you'll automatically be notified of progress on your
+    bug as I make changes.
+
+SUPPORT
+    You can find documentation for this module with the perldoc command.
+
+        perldoc Data::asXML
+
+    You can also look for information at:
+
+    * RT: CPAN's request tracker
+        http://rt.cpan.org/NoAuth/Bugs.html?Dist=Data-asXML
+
+    * AnnoCPAN: Annotated CPAN documentation
+        http://annocpan.org/dist/Data-asXML
+
+    * CPAN Ratings
+        http://cpanratings.perl.org/d/Data-asXML
+
+    * Search CPAN
+        http://search.cpan.org/dist/Data-asXML/
+
+ACKNOWLEDGEMENTS
+COPYRIGHT & LICENSE
+    Copyright 2009 Jozef Kutej.
+
+    This program is free software; you can redistribute it and/or modify it
+    under the terms of either: the GNU General Public License as published
+    by the Free Software Foundation; or the Artistic License.
+
+    See http://dev.perl.org/licenses/ for more information.
+
