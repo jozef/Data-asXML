@@ -52,7 +52,7 @@ use feature 'state';
 use Carp 'croak';
 use XML::LibXML;
 
-our $VERSION = '0.01';
+our $VERSION = '0.02';
 
 use base 'Class::Accessor::Fast';
 
@@ -124,9 +124,6 @@ sub encode {
     
     state $indent = 0;
     
-    croak 'pass something to encode'
-        if not $what;
-    
     given (ref $what) {
         # create DOM for hash element
         when ('HASH') {
@@ -167,7 +164,8 @@ sub encode {
         # create text node
         default {
             $where = $self->_xml->createElement('VALUE');
-            $where->addChild( $self->_xml->createTextNode( $what ) );
+            $where->addChild( $self->_xml->createTextNode( $what ) )
+                if defined $what;
         }
     }
     

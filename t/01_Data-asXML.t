@@ -4,7 +4,7 @@ use strict;
 use warnings;
 
 #use Test::More 'no_plan';
-use Test::More tests => 6;
+use Test::More tests => 8;
 use Test::Differences;
 use Test::Exception;
 use Encode;
@@ -34,6 +34,20 @@ sub main {
 			$dom->toString,
 			$string,
 			'encode utf-8 scalar',
+		);
+		
+		$dom = $dxml->encode(undef);
+		is(
+			$dom->toString,
+			'<VALUE/>',
+			'encode undef',
+		);
+
+		$dom = $dxml->encode('');
+		is(
+			$dom->toString,
+			'<VALUE></VALUE>',
+			'encode empty string',
 		);
 	}
 
