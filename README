@@ -2,16 +2,16 @@ NAME
     Data::asXML - convert data structures to/from XML
 
 SYNOPSIS
+        use Data::asXML;
         my $dxml = Data::asXML->new();
         my $dom = $dxml->encode({
             'some' => 'value',
             'in'   => [ qw(a data structure) ],
         });
 
-        # not implemented jet
         my $data = $dxml->decode(q{
             <HASH>
-                <KEY name="some">value</KEY>
+                <KEY name="some"><VALUE>value</VALUE></KEY>
                 <KEY name="in">
                     <ARRAY>
                         <VALUE>a</VALUE>
@@ -42,14 +42,17 @@ PROPERTIES
 
 METHODS
   new()
+
     Object constructor.
 
   encode($what)
+
     From structure `$what' generates XML::LibXML::Document DOM. Call
     `->toString' to get XML string. For more actions see XML::LibXML.
 
-  decode
-    Not implemented jet.
+  decode($xmlstring)
+
+    Takes `$xmlstring' and converts to data structure.
 
 AUTHOR
     Jozef Kutej, `<jkutej at cpan.org>'

@@ -6,16 +6,16 @@ Data::asXML - convert data structures to/from XML
 
 =head1 SYNOPSIS
 
+    use Data::asXML;
     my $dxml = Data::asXML->new();
     my $dom = $dxml->encode({
         'some' => 'value',
         'in'   => [ qw(a data structure) ],
     });
 
-    # not implemented jet
     my $data = $dxml->decode(q{
         <HASH>
-            <KEY name="some">value</KEY>
+            <KEY name="some"><VALUE>value</VALUE></KEY>
             <KEY name="in">
                 <ARRAY>
                     <VALUE>a</VALUE>
@@ -50,9 +50,10 @@ use 5.010;
 use feature 'state';
 
 use Carp 'croak';
-use XML::LibXML;
+use XML::LibXML 'XML_ELEMENT_NODE';
+use Scalar::Util 'blessed';
 
-our $VERSION = '0.02';
+our $VERSION = '0.03';
 
 use base 'Class::Accessor::Fast';
 
@@ -174,16 +175,53 @@ sub encode {
 }
 
 
-=head2 decode
+=head2 decode($xmlstring)
 
-Not implemented jet.
+Takes C<$xmlstring> and converts to data structure.
 
 =cut
 
 sub decode {
     my $self = shift;
+    my $xml  = shift;
+
+    my $value;
     
-    die 'not implemented jet.'
+    if (not blessed $xml) {
+        my $parser       = XML::LibXML->new();
+        my $doc          = $parser->parse_string($xml);
+        my $root_element = $doc->documentElement();
+        
+        return $self->decode($root_element);
+    }
+    
+    given ($xml->nodeName) {
+        when ('HASH') {
+            my %data;
+            my @keys =
+                grep { $_->nodeName eq 'KEY' }
+                grep { $_->nodeType eq XML_ELEMENT_NODE }
+                $xml->childNodes()
+            ;
+            foreach my $key (@keys) {
+                my $key_name  = $key->getAttribute('name');
+                my $key_value = $self->decode(grep { $_->nodeType eq XML_ELEMENT_NODE } $key->childNodes());     # is always only one
+                $data{$key_name} = $key_value;
+            }
+            return \%data;
+        }
+        when ('ARRAY') {
+            return [ map { $self->decode($_) } grep { $_->nodeType eq XML_ELEMENT_NODE } $xml->childNodes() ];
+        }
+        when ('VALUE') {
+            #return if not $xml->hasChildNodes();            
+            return $xml->textContent;
+        }
+        default {
+            die 'invalid (unknown) element "'.$xml->toString.'"'
+        }
+    }
+    
 }
 
 1;

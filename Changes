@@ -1,5 +1,11 @@
 Revision history for Data-asXML
 
+0.03    11 Nov 2009
+    - decode() functional
+
+0.02    20 Oct 2009
+    - allow undef and empty strings
+
 0.01    Date/time
         First version, released on an unsuspecting world.
 
