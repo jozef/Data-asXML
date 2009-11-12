@@ -46,6 +46,7 @@ structures to XSLT for transformations.
 use warnings;
 use strict;
 
+use utf8;
 use 5.010;
 use feature 'state';
 
@@ -232,6 +233,16 @@ __END__
 =head1 AUTHOR
 
 Jozef Kutej, C<< <jkutej at cpan.org> >>
+
+=head1 CONTRIBUTORS
+ 
+The following people have contributed to the Sys::Path by commiting their
+code, sending patches, reporting bugs, asking questions, suggesting useful
+advices, nitpicking, chatting on IRC or commenting on my blog (in no particular
+order):
+
+    Lars Dɪᴇᴄᴋᴏᴡ 迪拉斯
+    Emmanuel Rodriguez
 
 =head1 BUGS
 

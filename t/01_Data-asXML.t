@@ -3,11 +3,12 @@
 use strict;
 use warnings;
 
+use utf8;
+
 #use Test::More 'no_plan';
 use Test::More tests => 15;
 use Test::Differences;
 use Test::Exception;
-use Encode;
 
 BEGIN {
 	use_ok ( 'Data::asXML' ) or exit;
@@ -20,7 +21,7 @@ sub main {
 	my @test_conversions = (
 		# simple
 		['123','<VALUE>123</VALUE>','numeric scalar'],
-		[decode("utf8", 'ščžťľžô'), decode("utf8", '<VALUE>ščžťľžô</VALUE>'), 'utf-8 scalar'],
+		['ščžťľžô', '<VALUE>ščžťľžô</VALUE>', 'utf-8 scalar'],
 		[undef, '<VALUE/>', 'undef'],
 		['','<VALUE></VALUE>','empty string'],
 		

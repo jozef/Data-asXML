@@ -57,6 +57,15 @@ METHODS
 AUTHOR
     Jozef Kutej, `<jkutej at cpan.org>'
 
+CONTRIBUTORS
+    The following people have contributed to the Sys::Path by commiting
+    their code, sending patches, reporting bugs, asking questions,
+    suggesting useful advices, nitpicking, chatting on IRC or commenting on
+    my blog (in no particular order):
+
+        Lars Dɪᴇᴄᴋᴏᴡ 迪拉斯
+        Emmanuel Rodriguez
+
 BUGS
     Please report any bugs or feature requests to `bug-data-asxml at
     rt.cpan.org', or through the web interface at
