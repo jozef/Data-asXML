@@ -54,7 +54,7 @@ use Carp 'croak';
 use XML::LibXML 'XML_ELEMENT_NODE';
 use Scalar::Util 'blessed';
 
-our $VERSION = '0.03';
+our $VERSION = '0.04';
 
 use base 'Class::Accessor::Fast';
 
@@ -166,8 +166,14 @@ sub encode {
         # create text node
         default {
             $where = $self->_xml->createElement('VALUE');
-            $where->addChild( $self->_xml->createTextNode( $what ) )
-                if defined $what;
+            if (defined $what) {
+                $where->addChild( $self->_xml->createTextNode( $what ) )
+            }
+            else {
+                # no better way to distinguish between empty string and undef - see http://rt.cpan.org/Public/Bug/Display.html?id=51442
+                $where->setAttribute('type' => 'undef');
+            }
+                
         }
     }
     
@@ -215,7 +221,9 @@ sub decode {
             return [ map { $self->decode($_) } grep { $_->nodeType eq XML_ELEMENT_NODE } $xml->childNodes() ];
         }
         when ('VALUE') {
-            #return if not $xml->hasChildNodes();            
+            given ($xml->getAttribute('type')) {
+                when ('undef') { return undef; }
+            }
             return $xml->textContent;
         }
         default {

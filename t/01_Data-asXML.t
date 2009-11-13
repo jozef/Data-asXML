@@ -6,7 +6,7 @@ use warnings;
 use utf8;
 
 #use Test::More 'no_plan';
-use Test::More tests => 15;
+use Test::More tests => 21;
 use Test::Differences;
 use Test::Exception;
 
@@ -22,7 +22,7 @@ sub main {
 		# simple
 		['123','<VALUE>123</VALUE>','numeric scalar'],
 		['ščžťľžô', '<VALUE>ščžťľžô</VALUE>', 'utf-8 scalar'],
-		[undef, '<VALUE/>', 'undef'],
+		[undef, '<VALUE type="undef"/>', 'undef'],
 		['','<VALUE></VALUE>','empty string'],
 		
 		# array
@@ -109,9 +109,6 @@ sub main {
 		foreach my $test (@test_conversions) {
 			my $dxml = Data::asXML->new();
 			my $data = $dxml->decode($test->[1]);
-			
-		    local $TODO = 'see http://rt.cpan.org/Public/Bug/Display.html?id=51442'
-				if ($test->[2] eq 'undef');
 			
 			is_deeply(
 				$data,
