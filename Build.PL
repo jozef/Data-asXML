@@ -10,16 +10,17 @@ my $builder = Module::Build->new(
     dist_author         => 'Jozef Kutej <jkutej@cpan.org>',
     dist_version_from   => 'lib/Data/asXML.pm',
     requires => {
-        'Carp'        => 0,
-        'XML::LibXML' => 0,
+        'Carp'         => 0,
+        'XML::LibXML'  => 0,
         'Class::Accessor::Fast'
-                      => 0,
+                       => 0,
+        'MIME::Base64' => 0,
+        'Encode'       => 0,
     },
     build_requires => {
         'Test::More'        => 0,
         'Test::Differences' => 0,
         'Test::Exception'   => 0,
-        'Encode'            => 0,
     },
     add_to_cleanup      => [ 'Data-asXML-*' ],
     create_makefile_pl => 'traditional',

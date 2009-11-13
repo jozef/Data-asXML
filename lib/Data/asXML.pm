@@ -53,6 +53,8 @@ use feature 'state';
 use Carp 'croak';
 use XML::LibXML 'XML_ELEMENT_NODE';
 use Scalar::Util 'blessed';
+use MIME::Base64 'encode_base64', 'decode_base64';
+use Encode 'is_utf8';
 
 our $VERSION = '0.04';
 
@@ -167,6 +169,11 @@ sub encode {
         default {
             $where = $self->_xml->createElement('VALUE');
             if (defined $what) {
+                if ((not is_utf8($what, 1)) and ($what !~ m/^[[:ascii:]]*$/xms)) {
+                    $what = encode_base64($what);
+                    $what =~ s/\s*$//;
+                    $where->setAttribute('type' => 'base64');
+                }
                 $where->addChild( $self->_xml->createTextNode( $what ) )
             }
             else {
@@ -222,9 +229,10 @@ sub decode {
         }
         when ('VALUE') {
             given ($xml->getAttribute('type')) {
-                when ('undef') { return undef; }
+                when ('undef')  { return undef; }
+                when ('base64') { return decode_base64($xml->textContent) }
+                default         { return $xml->textContent }
             }
-            return $xml->textContent;
         }
         default {
             die 'invalid (unknown) element "'.$xml->toString.'"'

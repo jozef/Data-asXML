@@ -22,6 +22,7 @@ sub main {
 		# simple
 		['123','<VALUE>123</VALUE>','numeric scalar'],
 		['ščžťľžô', '<VALUE>ščžťľžô</VALUE>', 'utf-8 scalar'],
+		['迪拉斯', '<VALUE>迪拉斯</VALUE>', 'another utf-8 scalar'],
 		[undef, '<VALUE type="undef"/>', 'undef'],
 		['','<VALUE></VALUE>','empty string'],
 		
@@ -90,6 +91,16 @@ sub main {
 			'	</KEY>'."\n".
 			'</HASH>',
 			'complex nested hashes+arrays',
+		],
+		
+		# wird data
+		['|<"><">&|','<VALUE>|&lt;"&gt;&lt;"&gt;&amp;|</VALUE>','xml chars'],
+		
+		# binary
+		[
+			chr(0).chr(1).chr(2).chr(3).chr(253).chr(254).chr(255),
+			'<VALUE type="base64">AAECA/3+/w==</VALUE>',
+			'binary'
 		],
 	);
 
