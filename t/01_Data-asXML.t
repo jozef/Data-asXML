@@ -104,31 +104,26 @@ sub main {
 		],
 	);
 
-	encode: {
-		foreach my $test (@test_conversions) {
-			my $dxml = Data::asXML->new();
-			my $dom = $dxml->encode($test->[0]);
-			is(
-				$dom->toString,
-				$test->[1],
-				'encode() - '.$test->[2],
-			);
-		}
-	}
-	
-	decode: {
-		foreach my $test (@test_conversions) {
-			my $dxml = Data::asXML->new();
-			my $data = $dxml->decode($test->[1]);
-			
-			is_deeply(
-				$data,
-				$test->[0],
-				'decode() - '.$test->[2],
-			);
-		}
-	}
+	foreach my $test (@test_conversions) {
+		my $dxml  = Data::asXML->new();
+		my $dxml2 = Data::asXML->new();
+		my $dom   = $dxml->encode($test->[0]);
+		my $data  = $dxml2->decode($test->[1]);
 
+		# encode
+		is(
+			$dom->toString,
+			$test->[1],
+			'encode() - '.$test->[2],
+		);
+		
+		# decode
+		is_deeply(
+			$data,
+			$test->[0],
+			'decode() - '.$test->[2],
+		);
+	}
 	
 	return 0;
 }
