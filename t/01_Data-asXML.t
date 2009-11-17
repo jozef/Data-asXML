@@ -6,7 +6,7 @@ use warnings;
 use utf8;
 
 #use Test::More 'no_plan';
-use Test::More tests => 21;
+use Test::More tests => 42;
 use Test::Differences;
 use Test::Exception;
 
@@ -17,6 +17,9 @@ BEGIN {
 exit main();
 
 sub main {
+	
+	test_make_relative_xpath();
+	test_href_key();
 
 	my @test_conversions = (
 		# simple
@@ -102,29 +105,228 @@ sub main {
 			'<VALUE type="base64">AAECA/3+/w==</VALUE>',
 			'binary'
 		],
+		
 	);
+	
+	# double reference
+	my $hash_ref = { 'hey' => 'there' };
+	push @test_conversions, [
+		[ $hash_ref, $hash_ref ],
+		'<ARRAY>'."\n".
+		'	<HASH>'."\n".
+		'		<KEY name="hey">'."\n".
+		'			<VALUE>there</VALUE>'."\n".
+		'		</KEY>'."\n".
+		'	</HASH>'."\n".
+		'	<HASH href="*[1]"/>'."\n".
+		'</ARRAY>',
+		'2x same hash reference'
+	];
+	push @test_conversions, [
+		[ $hash_ref, [ $hash_ref ] ],
+		'<ARRAY>'."\n".
+		'	<HASH>'."\n".
+		'		<KEY name="hey">'."\n".
+		'			<VALUE>there</VALUE>'."\n".
+		'		</KEY>'."\n".
+		'	</HASH>'."\n".
+		'	<ARRAY>'."\n".
+		'		<HASH href="../*[1]"/>'."\n".
+		'	</ARRAY>'."\n".
+		'</ARRAY>',
+		'2x same hash reference, once in []'
+	];
 
+	my $array_ref = [ 1 ];
+	push @test_conversions, [
+		[ $array_ref, [ $array_ref ] ],
+		'<ARRAY>'."\n".
+		'	<ARRAY>'."\n".
+		'		<VALUE>1</VALUE>'."\n".
+		'	</ARRAY>'."\n".
+		'	<ARRAY>'."\n".
+		'		<ARRAY href="../*[1]"/>'."\n".
+		'	</ARRAY>'."\n".
+		'</ARRAY>',
+		'double array reference'
+	];
+
+	# circular reference
+	my $array_ref2 = [];
+	push @$array_ref2, $array_ref2;
+	push @test_conversions, [
+		$array_ref2,
+		'<ARRAY>'."\n".
+		'	<ARRAY href="../*[1]"/>'."\n".
+		'</ARRAY>',
+		'array with array ref to self',
+	];
+	
+	my (%hash_one, %hash_two);
+	$hash_one{'other'} = \%hash_two;
+	$hash_two{'other'} = \%hash_one;
+	push @test_conversions, [
+		[ \%hash_one, \%hash_two ],
+		'<ARRAY>'."\n".
+		'	<HASH>'."\n".
+		'		<KEY name="other">'."\n".
+		'			<HASH>'."\n".
+		'				<KEY name="other">'."\n".
+		'					<HASH href="../../../../*[1]"/>'."\n".
+		'				</KEY>'."\n".
+		'			</HASH>'."\n".
+		'		</KEY>'."\n".
+		'	</HASH>'."\n".
+		'	<HASH href="*[1]/*[1]/*[1]"/>'."\n".
+		'</ARRAY>',
+		'two hashes refering to self',
+	];
+	
+
+	my (%hash1, %hash2, %hash3);
+	$hash1{'info'} = '/me hash1';
+	$hash1{'next'} = \%hash2;
+	$hash1{'prev'} = \%hash3;
+	$hash2{'info'} = '/me hash2';
+	$hash2{'next'} = \%hash3;
+	$hash2{'prev'} = \%hash1;
+	$hash3{'info'} = '/me hash3';
+	$hash3{'next'} = \%hash1;
+	$hash3{'prev'} = \%hash2;
+	push @test_conversions, [
+		[ \%hash1, \%hash2, \%hash3 ],
+		'<ARRAY>'."\n".
+		'	<HASH>'."\n".
+		'		<KEY name="info">'."\n".
+		'			<VALUE>/me hash1</VALUE>'."\n".
+		'		</KEY>'."\n".
+		'		<KEY name="next">'."\n".
+		'			<HASH>'."\n".
+		'				<KEY name="info">'."\n".
+		'					<VALUE>/me hash2</VALUE>'."\n".
+		'				</KEY>'."\n".
+		'				<KEY name="next">'."\n".
+		'					<HASH>'."\n".
+		'						<KEY name="info">'."\n".
+		'							<VALUE>/me hash3</VALUE>'."\n".
+		'						</KEY>'."\n".
+		'						<KEY name="next">'."\n".
+		'							<HASH href="../../../../../../*[1]"/>'."\n".
+		'						</KEY>'."\n".
+		'						<KEY name="prev">'."\n".
+		'							<HASH href="../../../../*[1]"/>'."\n".
+		'						</KEY>'."\n".
+		'					</HASH>'."\n".
+		'				</KEY>'."\n".
+		'				<KEY name="prev">'."\n".
+		'					<HASH href="../../../../*[1]"/>'."\n".
+		'				</KEY>'."\n".
+		'			</HASH>'."\n".
+		'		</KEY>'."\n".
+		'		<KEY name="prev">'."\n".
+		'			<HASH href="../*[2]/*[1]/*[2]/*[1]"/>'."\n".
+		'		</KEY>'."\n".
+		'	</HASH>'."\n".
+		'	<HASH href="*[1]/*[2]/*[1]"/>'."\n".
+		'	<HASH href="*[1]/*[2]/*[1]/*[2]/*[1]"/>'."\n".
+		'</ARRAY>',
+		'three hashes referencing to each other'
+	];
+
+	my $dxml  = Data::asXML->new();
+	my $dxml2 = Data::asXML->new();
 	foreach my $test (@test_conversions) {
-		my $dxml  = Data::asXML->new();
-		my $dxml2 = Data::asXML->new();
 		my $dom   = $dxml->encode($test->[0]);
 		my $data  = $dxml2->decode($test->[1]);
 
 		# encode
-		is(
+		eq_or_diff(
 			$dom->toString,
 			$test->[1],
 			'encode() - '.$test->[2],
 		);
-		
+
 		# decode
 		is_deeply(
 			$data,
 			$test->[0],
 			'decode() - '.$test->[2],
 		);
+
 	}
 	
 	return 0;
 }
 
+sub test_make_relative_xpath {
+	my $dxml  = Data::asXML->new();
+	is(
+		$dxml->_make_relative_xpath(
+			[1,1],
+			[1,2],
+		),
+		'*[1]',
+		'relative xpath at the same level'
+	);
+	is(
+		$dxml->_make_relative_xpath(
+			[1,1,1],
+			[1,2],
+		),
+		'*[1]/*[1]',
+		'relative xpath at the same level + 1'
+	);
+	is(
+		$dxml->_make_relative_xpath(
+			[1,1,1],
+			[1,2,1],
+		),
+		'../*[1]/*[1]',
+		'relative xpath with ..'
+	);
+	is(
+		$dxml->_make_relative_xpath(
+			[1,2,3,4,5],
+			[1,2,6,7],
+		),
+		'../*[3]/*[4]/*[5]',
+		'relative xpath with ..'
+	);
+	is(
+		$dxml->_make_relative_xpath(
+			[1,1,3,4,5],
+			[1,2,6,7],
+		),
+		'../../*[1]/*[3]/*[4]/*[5]',
+		'relative xpath with ../..'
+	);
+	is(
+		$dxml->_make_relative_xpath(
+			[1,1],
+			[1,1,3,4],
+		),
+		'../../*[1]',
+		'self referencing'
+	);
+}
+
+sub test_href_key {
+	my $dxml  = Data::asXML->new();
+	$dxml->{'_cur_xpath_steps'} = [ 1,2 ];
+
+	is(
+		$dxml->_href_key('*[1]'),
+		'1,2,1',
+		'href_key mapping, same level'
+	);	
+	is(
+		$dxml->_href_key('*[1]/*[1]/*[2]'),
+		'1,2,1,1,2',
+		'href_key mapping, same level'
+	);	
+	is(
+		$dxml->_href_key('../*[1]'),
+		'1,1',
+		'href_key mapping, level up'
+	);	
+}

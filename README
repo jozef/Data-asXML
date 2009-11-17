@@ -66,6 +66,13 @@ CONTRIBUTORS
         Lars Dɪᴇᴄᴋᴏᴡ 迪拉斯
         Emmanuel Rodriguez
 
+TODO
+        * SCALAR ref encoding
+        * safe_mode() to add extra decode after encoding and compare the results if they match
+        * int, float encoding ? (string enough?)
+        * allow setting namespace
+        * XSD
+
 BUGS
     Please report any bugs or feature requests to `bug-data-asxml at
     rt.cpan.org', or through the web interface at

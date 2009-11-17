@@ -124,46 +124,90 @@ C<< ->toString >> to get XML string. For more actions see L<XML::LibXML>.
 sub encode {
     my $self  = shift;
     my $what  = shift;
+    my $pos   = shift || 1;
     my $where;
     
     state $indent = 0;
+    
+    if (not $self->{'_cur_xpath_steps'}) {
+        $self->{'_href_mapping'}    = {};
+        $self->{'_cur_xpath_steps'} = [];
+    }
     
     given (ref $what) {
         # create DOM for hash element
         when ('HASH') {
             $where = $self->_xml->createElement('HASH');
             $indent++;
+            push @{$self->{'_cur_xpath_steps'}}, $pos;
+            # already encoded reference
+            if (exists $self->{'_href_mapping'}->{$what}) {
+                $where->setAttribute(
+                    'href' =>
+                    $self->_make_relative_xpath(
+                        [ split(',', $self->{'_href_mapping'}->{$what}) ],
+                        $self->{'_cur_xpath_steps'}
+                    )
+                );
+                $indent--;
+                pop @{$self->{'_cur_xpath_steps'}};
+                return $where;
+            }
+            $self->{'_href_mapping'}->{$what} = $self->_xpath_steps_string();
             
+            my $key_pos = 0;
             while (my ($key, $value) = each %{$what}) {
+                $key_pos++;
                 $self->_indent($where, $indent);
                 $indent++;
 
                 my $el = $self->_xml->createElement('KEY');
+                push @{$self->{'_cur_xpath_steps'}}, $key_pos;
                 $self->_indent($el, $indent);
                 $el->setAttribute('name', $key);
                 $el->addChild($self->encode($value));
 
                 $indent--;
                 $self->_indent($el, $indent);
+                pop @{$self->{'_cur_xpath_steps'}};
 
                 $where->addChild($el);
             }
             
             $indent--;
             $self->_indent($where, $indent);
+            pop @{$self->{'_cur_xpath_steps'}};
         }
         # create DOM for array element
         when ('ARRAY') {
             $where = $self->_xml->createElement('ARRAY');
             $indent++;
+            push @{$self->{'_cur_xpath_steps'}}, $pos;
+            # already encoded reference
+            if (exists $self->{'_href_mapping'}->{$what}) {
+                $where->setAttribute(
+                    'href' =>
+                    $self->_make_relative_xpath(
+                        [ split(',', $self->{'_href_mapping'}->{$what}) ],
+                        $self->{'_cur_xpath_steps'}
+                    )
+                );
+                $indent--;
+                pop @{$self->{'_cur_xpath_steps'}};
+                return $where;
+            }
+            $self->{'_href_mapping'}->{$what.''} = $self->_xpath_steps_string();
             
+            my $array_pos = 0;
             foreach my $value (@{$what}) {
+                $array_pos++;
                 $self->_indent($where, $indent);
-                $where->addChild($self->encode($value));
+                $where->addChild($self->encode($value, $array_pos));
             }
             
             $indent--;
             $self->_indent($where, $indent);
+            pop @{$self->{'_cur_xpath_steps'}};
         }
         # create text node
         default {
@@ -183,11 +227,59 @@ sub encode {
                 
         }
     }
-    
 
+    # cleanup at the end
+    if ($indent == 0) {
+        $self->{'_href_mapping'}    = {};
+        $self->{'_cur_xpath_steps'} = [];
+    }
+    
     return $where;
 }
 
+sub _xpath_steps_string {
+    my $self       = shift;
+    my $path_array = shift || $self->{'_cur_xpath_steps'};
+    return join(',',@{$path_array});
+}
+
+sub _make_relative_xpath {
+    my $self      = shift;
+    my $orig_path = shift;
+    my $cur_path  = shift;
+    
+    # find how many elements (from beginning) the paths are sharing
+    my $common_root_index = 0;
+    while (
+            ($common_root_index < @$orig_path)
+            and ($orig_path->[$common_root_index] == $cur_path->[$common_root_index])
+    ) {
+        $common_root_index++;
+    }
+    
+    # add '..' to move up the element hierarchy until the common element
+    my @rel_path = ();
+    my $i = $common_root_index+1;
+    while ($i < scalar @$cur_path) {
+        push @rel_path, '..';
+        $i++;
+    }
+    
+    # add the original element path steps
+    $i = $common_root_index;
+    while ($i < scalar @$orig_path) {
+        push @rel_path, $orig_path->[$i];
+        $i++;
+    }
+    
+    # in case of self referencing the element index is needed
+    if ($i == $common_root_index) {
+        push @rel_path, '..', $orig_path->[-1];
+    }
+    
+    # return relative xpath
+    return join('/', map { $_ eq '..' ? $_ : '*['.$_.']' } @rel_path);
+}
 
 =head2 decode($xmlstring)
 
@@ -198,6 +290,12 @@ Takes C<$xmlstring> and converts to data structure.
 sub decode {
     my $self = shift;
     my $xml  = shift;
+    my $pos   = shift || 1;
+
+    if (not $self->{'_cur_xpath_steps'}) {
+        local $self->{'_href_mapping'}    = {};
+        local $self->{'_cur_xpath_steps'} = [];
+    }
 
     my $value;
     
@@ -211,21 +309,48 @@ sub decode {
     
     given ($xml->nodeName) {
         when ('HASH') {
+            if (my $xpath_path = $xml->getAttribute('href')) {
+                my $href_key = $self->_href_key($xpath_path);                
+                return $self->{'_href_mapping'}->{$href_key} || die 'invalid reference - '.$href_key.' ('.$xml->toString.')';
+            }
+            
+            push @{$self->{'_cur_xpath_steps'}}, $pos;
+            
             my %data;
+            $self->{'_href_mapping'}->{$self->_xpath_steps_string()} = \%data;
             my @keys =
                 grep { $_->nodeName eq 'KEY' }
                 grep { $_->nodeType eq XML_ELEMENT_NODE }
                 $xml->childNodes()
             ;
+            my $key_pos = 1;
             foreach my $key (@keys) {
+                push @{$self->{'_cur_xpath_steps'}}, $key_pos;
                 my $key_name  = $key->getAttribute('name');
                 my $key_value = $self->decode(grep { $_->nodeType eq XML_ELEMENT_NODE } $key->childNodes());     # is always only one
                 $data{$key_name} = $key_value;
+                pop @{$self->{'_cur_xpath_steps'}};
+                $key_pos++;
             }
+            pop @{$self->{'_cur_xpath_steps'}};
             return \%data;
         }
         when ('ARRAY') {
-            return [ map { $self->decode($_) } grep { $_->nodeType eq XML_ELEMENT_NODE } $xml->childNodes() ];
+            if (my $xpath_path = $xml->getAttribute('href')) {
+                my $href_key = $self->_href_key($xpath_path);
+                
+                return $self->{'_href_mapping'}->{$href_key} || die 'invalid reference - '.$href_key.' ('.$xml->toString.')';
+            }
+
+            push @{$self->{'_cur_xpath_steps'}}, $pos;
+
+            my @data;
+            $self->{'_href_mapping'}->{$self->_xpath_steps_string()} = \@data;
+            
+            my $array_element_pos = 1;
+            @data = map { $self->decode($_, $array_element_pos++) } grep { $_->nodeType eq XML_ELEMENT_NODE } $xml->childNodes();
+            pop @{$self->{'_cur_xpath_steps'}};
+            return \@data;
         }
         when ('VALUE') {
             given ($xml->getAttribute('type')) {
@@ -239,6 +364,27 @@ sub decode {
         }
     }
     
+}
+
+sub _href_key {
+    my $self               = shift;
+    my $xpath_steps_string = shift;
+    
+    my @path        = @{$self->{'_cur_xpath_steps'}};
+    my @xpath_steps =
+        map { $_ =~ m/^\*\[(\d+)\]$/xms ? $1 : $_ }
+        split('/', $xpath_steps_string)
+    ;
+    
+    my $i = 0;
+    while ($i < @xpath_steps) {
+        given ($xpath_steps[$i]) {
+            when ('..') { pop @path }
+            default     { push @path, $_ }
+        }
+        $i++;
+    }
+    return $self->_xpath_steps_string(\@path)
 }
 
 1;
@@ -259,6 +405,14 @@ order):
 
     Lars Dɪᴇᴄᴋᴏᴡ 迪拉斯
     Emmanuel Rodriguez
+
+=head1 TODO
+
+    * SCALAR ref encoding
+    * safe_mode() to add extra decode after encoding and compare the results if they match
+    * int, float encoding ? (string enough?)
+    * allow setting namespace
+    * XSD
 
 =head1 BUGS
 
