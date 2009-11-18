@@ -6,7 +6,7 @@ use warnings;
 use utf8;
 
 #use Test::More 'no_plan';
-use Test::More tests => 48;
+use Test::More tests => 50;
 use Test::Differences;
 use Test::Exception;
 
@@ -288,7 +288,18 @@ sub main {
 			$test->[0],
 			'decode() - '.$test->[2],
 		);
-
+	}
+	
+	SAFE_MODE: {
+		$dxml->safe_mode(1);
+		lives_ok
+			{ $dxml->encode({ 'hi' => 'there' }) }
+			'encode with safe_mode on'
+		;
+		lives_ok
+			{ $dxml->decode('<HASH><KEY name="hi"><VALUE>there</VALUE></KEY></HASH>') }
+			'decode with safe_mode on'
+		;
 	}
 	
 	return 0;

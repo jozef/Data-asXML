@@ -55,6 +55,7 @@ use XML::LibXML 'XML_ELEMENT_NODE';
 use Scalar::Util 'blessed';
 use MIME::Base64 'encode_base64', 'decode_base64';
 use Encode 'is_utf8';
+use Test::Deep::NoTest 'eq_deeply';
 
 our $VERSION = '0.04';
 
@@ -66,7 +67,20 @@ use base 'Class::Accessor::Fast';
 
 =item pretty
 
-(default 1) will insert text nodes to the XML to make the output indented.
+(default 1 - true) will insert text nodes to the XML to make the output indented.
+
+=item safe_mode
+
+(default undef - false)
+
+in case of C<encode()> perform the xml string decoding back and will compare
+the two data structures to be sure the data can be reconstructed back without
+errors.
+
+in case of a C<decode()> it will decode to data then encode to xml string and from
+xml string decode back to data. this two data values are then compared.
+
+Both compares is done using L<Test::Deep::NoTest>::eq_deeply.
 
 =back
 
@@ -74,6 +88,7 @@ use base 'Class::Accessor::Fast';
 
 __PACKAGE__->mk_accessors(qw{
     pretty
+    safe_mode
 });
 
 =head1 METHODS
@@ -126,6 +141,9 @@ sub encode {
     my $what  = shift;
     my $pos   = shift || 1;
     my $where;
+    
+    my $safe_mode = $self->safe_mode;
+    $self->safe_mode(0);
     
     state $indent = 0;
     
@@ -236,12 +254,13 @@ sub encode {
         default {
             $where = $self->_xml->createElement('VALUE');
             if (defined $what) {
-                if ((not is_utf8($what, 1)) and ($what !~ m/^[[:ascii:]]*$/xms)) {
-                    $what = encode_base64($what);
-                    $what =~ s/\s*$//;
+                my $scalar = $what;
+                if ((not is_utf8($scalar, 1)) and ($scalar !~ m/^[[:ascii:]]*$/xms)) {
+                    $scalar = encode_base64($scalar);
+                    $scalar =~ s/\s*$//;
                     $where->setAttribute('type' => 'base64');
                 }
-                $where->addChild( $self->_xml->createTextNode( $what ) )
+                $where->addChild( $self->_xml->createTextNode( $scalar ) )
             }
             else {
                 # no better way to distinguish between empty string and undef - see http://rt.cpan.org/Public/Bug/Display.html?id=51442
@@ -255,6 +274,18 @@ sub encode {
     if ($indent == 0) {
         $self->{'_href_mapping'}    = {};
         $self->{'_cur_xpath_steps'} = [];
+    }
+
+    # in safe_mode decode back the xml string and compare the data structures
+    if ($safe_mode) {
+        my $xml_string = $where->toString;
+        my $what_decoded = eval { $self->decode($xml_string) };
+        
+        die 'encoding failed '.$@.' of '.eval('use Data::Dumper; Dumper([$what, $xml_string, $what_decoded])').' failed'
+            if not eq_deeply($what, $what_decoded);
+        
+        # set back the safe mode after all was encoded
+        $self->safe_mode($safe_mode);
     }
     
     return $where;
@@ -314,6 +345,20 @@ sub decode {
     my $self = shift;
     my $xml  = shift;
     my $pos   = shift || 1;
+
+    # in safe_mode "encode+decode" the decoded data for comparing
+    if ($self->safe_mode) {
+        $self->safe_mode(0);
+        my $data           = $self->decode($xml, $pos);
+        my $data_redecoded = eval { $self->decode(
+            $self->encode($data)->toString,
+            $pos,
+        )};
+        die 'redecoding failed "'.$@.'" of '.eval('use Data::Dumper; Dumper([$xml, $data, $data_redecoded])').' failed'
+            if not eq_deeply($data, $data_redecoded);
+        $self->safe_mode(1);
+        return $data;
+    }
 
     if (not $self->{'_cur_xpath_steps'}) {
         local $self->{'_href_mapping'}    = {};
@@ -444,7 +489,6 @@ order):
 
 =head1 TODO
 
-    * safe_mode() to add extra decode after encoding and compare the results if they match
     * int, float encoding ? (string enough?)
     * allow setting namespace
     * XSD
