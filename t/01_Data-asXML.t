@@ -6,7 +6,7 @@ use warnings;
 use utf8;
 
 #use Test::More 'no_plan';
-use Test::More tests => 42;
+use Test::More tests => 48;
 use Test::Differences;
 use Test::Exception;
 
@@ -108,6 +108,20 @@ sub main {
 		
 	);
 	
+	# scalar reference
+	my $scalar_ref  = \"hi there!";
+	my $scalar_ref2 = \("hi there!".chr(255));
+	push @test_conversions, [
+		$scalar_ref,
+		'<VALUE subtype="ref">hi there!</VALUE>',
+		'simple scalar reference'
+	], [
+		$scalar_ref2,
+		'<VALUE type="base64" subtype="ref">aGkgdGhlcmUh/w==</VALUE>',
+		'simple scalar reference to binary'
+	];
+	
+	
 	# double reference
 	my $hash_ref = { 'hey' => 'there' };
 	push @test_conversions, [
@@ -120,7 +134,17 @@ sub main {
 		'	</HASH>'."\n".
 		'	<HASH href="*[1]"/>'."\n".
 		'</ARRAY>',
-		'2x same hash reference'
+		'2x same hash references'
+	], [
+		[ 1, 2, $scalar_ref, 4, $scalar_ref ],
+		'<ARRAY>'."\n".
+		'	<VALUE>1</VALUE>'."\n".
+		'	<VALUE>2</VALUE>'."\n".
+		'	<VALUE subtype="ref">hi there!</VALUE>'."\n".
+		'	<VALUE>4</VALUE>'."\n".
+		'	<VALUE href="*[3]"/>'."\n".
+		'</ARRAY>',
+		'2x same scalar references'
 	];
 	push @test_conversions, [
 		[ $hash_ref, [ $hash_ref ] ],
@@ -134,7 +158,7 @@ sub main {
 		'		<HASH href="../*[1]"/>'."\n".
 		'	</ARRAY>'."\n".
 		'</ARRAY>',
-		'2x same hash reference, once in []'
+		'2x same hash references, once in []'
 	];
 
 	my $array_ref = [ 1 ];
@@ -183,16 +207,19 @@ sub main {
 	];
 	
 
-	my (%hash1, %hash2, %hash3);
+	my (%hash1, %hash2, %hash3, $scalar_ref3);
 	$hash1{'info'} = '/me hash1';
 	$hash1{'next'} = \%hash2;
 	$hash1{'prev'} = \%hash3;
+	$hash1{'more'} = \$scalar_ref3;
 	$hash2{'info'} = '/me hash2';
 	$hash2{'next'} = \%hash3;
 	$hash2{'prev'} = \%hash1;
+	$hash2{'more'} = \$scalar_ref3;
 	$hash3{'info'} = '/me hash3';
 	$hash3{'next'} = \%hash1;
 	$hash3{'prev'} = \%hash2;
+	$hash3{'more'} = \$scalar_ref3;
 	push @test_conversions, [
 		[ \%hash1, \%hash2, \%hash3 ],
 		'<ARRAY>'."\n".
@@ -216,15 +243,24 @@ sub main {
 		'						<KEY name="prev">'."\n".
 		'							<HASH href="../../../../*[1]"/>'."\n".
 		'						</KEY>'."\n".
+		'						<KEY name="more">'."\n".
+		'							<VALUE type="undef" subtype="ref"/>'."\n".
+		'						</KEY>'."\n".
 		'					</HASH>'."\n".
 		'				</KEY>'."\n".
 		'				<KEY name="prev">'."\n".
 		'					<HASH href="../../../../*[1]"/>'."\n".
 		'				</KEY>'."\n".
+		'				<KEY name="more">'."\n".
+		'					<VALUE href="../*[2]/*[1]/*[4]/*[1]"/>'."\n".
+		'				</KEY>'."\n".
 		'			</HASH>'."\n".
 		'		</KEY>'."\n".
 		'		<KEY name="prev">'."\n".
 		'			<HASH href="../*[2]/*[1]/*[2]/*[1]"/>'."\n".
+		'		</KEY>'."\n".
+		'		<KEY name="more">'."\n".
+		'			<VALUE href="../*[2]/*[1]/*[2]/*[1]/*[4]/*[1]"/>'."\n".
 		'		</KEY>'."\n".
 		'	</HASH>'."\n".
 		'	<HASH href="*[1]/*[2]/*[1]"/>'."\n".

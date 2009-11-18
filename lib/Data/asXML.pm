@@ -209,6 +209,29 @@ sub encode {
             $self->_indent($where, $indent);
             pop @{$self->{'_cur_xpath_steps'}};
         }
+        # scalar reference
+        when ('SCALAR') {
+            push @{$self->{'_cur_xpath_steps'}}, $pos;
+            # already encoded reference
+            if (exists $self->{'_href_mapping'}->{$what}) {
+                $where = $self->_xml->createElement('VALUE');
+                $where->setAttribute(
+                    'href' =>
+                    $self->_make_relative_xpath(
+                        [ split(',', $self->{'_href_mapping'}->{$what}) ],
+                        $self->{'_cur_xpath_steps'}
+                    )
+                );
+                pop @{$self->{'_cur_xpath_steps'}};
+                return $where;
+            }
+            $self->{'_href_mapping'}->{$what.''} = $self->_xpath_steps_string();
+
+            $where = $self->encode($$what);
+            $where->setAttribute('subtype' => 'ref');
+
+            pop @{$self->{'_cur_xpath_steps'}};
+        }
         # create text node
         default {
             $where = $self->_xml->createElement('VALUE');
@@ -353,11 +376,24 @@ sub decode {
             return \@data;
         }
         when ('VALUE') {
-            given ($xml->getAttribute('type')) {
-                when ('undef')  { return undef; }
-                when ('base64') { return decode_base64($xml->textContent) }
-                default         { return $xml->textContent }
+            if (my $xpath_path = $xml->getAttribute('href')) {
+                my $href_key = $self->_href_key($xpath_path);                
+                return $self->{'_href_mapping'}->{$href_key} || die 'invalid reference - '.$href_key.' ('.$xml->toString.')';
             }
+
+            push @{$self->{'_cur_xpath_steps'}}, $pos;
+            my $value;
+            $self->{'_href_mapping'}->{$self->_xpath_steps_string()} = \$value;
+            pop @{$self->{'_cur_xpath_steps'}};
+            
+            given ($xml->getAttribute('type')) {
+                when ('undef')  { $value = undef; }
+                when ('base64') { $value = decode_base64($xml->textContent) }
+                default         { $value = $xml->textContent }
+            }
+            return \$value
+                if ($xml->getAttribute('subtype') ~~ 'ref');
+            return $value;
         }
         default {
             die 'invalid (unknown) element "'.$xml->toString.'"'
@@ -408,11 +444,11 @@ order):
 
 =head1 TODO
 
-    * SCALAR ref encoding
     * safe_mode() to add extra decode after encoding and compare the results if they match
     * int, float encoding ? (string enough?)
     * allow setting namespace
     * XSD
+    * anyone else has an idea?
 
 =head1 BUGS
 
