@@ -1,10 +1,11 @@
 Revision history for Data-asXML
 
 0.05    17 Nov 2009
-    - double, circular reference en/decoding
-    - scalar reference en/decoding
+    - double, circular (HASH, ARRAY, VALUE) reference en/decoding
+    - SCALAR reference en/decoding
     - added safe_mode option
     - added namespace option
+    - REF reference en/decoding
 
 0.04    13 Nov 2009
     - proper undef en/decoding

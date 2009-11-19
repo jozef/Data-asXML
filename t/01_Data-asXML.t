@@ -6,7 +6,7 @@ use warnings;
 use utf8;
 
 #use Test::More 'no_plan';
-use Test::More tests => 52;
+use Test::More tests => 58;
 use Test::Differences;
 use Test::Exception;
 
@@ -111,6 +111,7 @@ sub main {
 	# scalar reference
 	my $scalar_ref  = \"hi there!";
 	my $scalar_ref2 = \("hi there!".chr(255));
+	my $ref_to_scalar_ref = \$scalar_ref;
 	push @test_conversions, [
 		$scalar_ref,
 		'<VALUE subtype="ref">hi there!</VALUE>',
@@ -119,6 +120,20 @@ sub main {
 		$scalar_ref2,
 		'<VALUE type="base64" subtype="ref">aGkgdGhlcmUh/w==</VALUE>',
 		'simple scalar reference to binary'
+	], [
+		$ref_to_scalar_ref,
+		'<REF>'."\n".
+		'	<VALUE subtype="ref">hi there!</VALUE>'."\n".
+		'</REF>',
+		'reference to scalar reference'
+	], [
+		\$ref_to_scalar_ref,
+		'<REF>'."\n".
+		'	<REF>'."\n".
+		'		<VALUE subtype="ref">hi there!</VALUE>'."\n".
+		'	</REF>'."\n".
+		'</REF>',
+		'reference to reference to scalar reference'
 	];
 	
 	
@@ -143,6 +158,20 @@ sub main {
 		'	<VALUE subtype="ref">hi there!</VALUE>'."\n".
 		'	<VALUE>4</VALUE>'."\n".
 		'	<VALUE href="*[3]"/>'."\n".
+		'</ARRAY>',
+		'2x same scalar references'
+	], [
+		[ 1, 2, $scalar_ref, 4, $ref_to_scalar_ref, 6, $ref_to_scalar_ref ],
+		'<ARRAY>'."\n".
+		'	<VALUE>1</VALUE>'."\n".
+		'	<VALUE>2</VALUE>'."\n".
+		'	<VALUE subtype="ref">hi there!</VALUE>'."\n".
+		'	<VALUE>4</VALUE>'."\n".
+		'	<REF>'."\n".
+		'		<VALUE href="../*[3]"/>'."\n".
+		'	</REF>'."\n".
+		'	<VALUE>6</VALUE>'."\n".
+		'	<REF href="*[5]"/>'."\n".
 		'</ARRAY>',
 		'2x same scalar references'
 	];

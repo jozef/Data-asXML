@@ -240,6 +240,33 @@ sub encode {
             $self->_indent($where, $indent);
             pop @{$self->{'_cur_xpath_steps'}};
         }
+        # create element for pure reference
+        when ('REF') {
+            $where = $self->_xml->createElement('REF');
+            $indent++;
+            push @{$self->{'_cur_xpath_steps'}}, $pos;
+            # already encoded reference
+            if (exists $self->{'_href_mapping'}->{$what}) {
+                $where->setAttribute(
+                    'href' =>
+                    $self->_make_relative_xpath(
+                        [ split(',', $self->{'_href_mapping'}->{$what}) ],
+                        $self->{'_cur_xpath_steps'}
+                    )
+                );
+                $indent--;
+                pop @{$self->{'_cur_xpath_steps'}};
+                return $where;
+            }
+            $self->{'_href_mapping'}->{$what.''} = $self->_xpath_steps_string();
+            
+            $self->_indent($where, $indent);
+            $where->addChild($self->encode($$what));
+            
+            $indent--;
+            $self->_indent($where, $indent);
+            pop @{$self->{'_cur_xpath_steps'}};
+        }
         # scalar reference
         when ('SCALAR') {
             push @{$self->{'_cur_xpath_steps'}}, $pos;
@@ -264,7 +291,7 @@ sub encode {
             pop @{$self->{'_cur_xpath_steps'}};
         }
         # create text node
-        default {
+        when ('') {
             $where = $self->_xml->createElement('VALUE');
             if (defined $what) {
                 my $scalar = $what;
@@ -280,6 +307,10 @@ sub encode {
                 $where->setAttribute('type' => 'undef');
             }
                 
+        }
+        #
+        default {
+            die 'unknown reference - '.$what;
         }
     }
 
@@ -438,6 +469,22 @@ sub decode {
             @data = map { $self->decode($_, $array_element_pos++) } grep { $_->nodeType eq XML_ELEMENT_NODE } $xml->childNodes();
             pop @{$self->{'_cur_xpath_steps'}};
             return \@data;
+        }
+        when ('REF') {
+            if (my $xpath_path = $xml->getAttribute('href')) {
+                my $href_key = $self->_href_key($xpath_path);
+                return $self->{'_href_mapping'}->{$href_key} || die 'invalid reference - '.$href_key.' ('.$xml->toString.')';
+            }
+
+            push @{$self->{'_cur_xpath_steps'}}, $pos;
+
+            my $data;
+            $self->{'_href_mapping'}->{$self->_xpath_steps_string()} = \$data;
+            
+            ($data) = map { $self->decode($_) } grep { $_->nodeType eq XML_ELEMENT_NODE } $xml->childNodes();
+
+            pop @{$self->{'_cur_xpath_steps'}};
+            return \$data;
         }
         when ('VALUE') {
             if (my $xpath_path = $xml->getAttribute('href')) {
