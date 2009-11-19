@@ -26,6 +26,25 @@ Data::asXML - convert data structures to/from XML
         </HASH>
     });
 
+    my (%hash1, %hash2);
+    $hash1{other}=\%hash2;
+    $hash2{other}=\%hash1;
+    print Data::asXML->new->encode([1, \%hash1, \%hash2])->toString;
+    
+    <ARRAY>
+        <VALUE>1</VALUE>
+    	<HASH>
+		    <KEY name="other">
+			    <HASH>
+				    <KEY name="other">
+					    <HASH href="../../../../*[2]"/>
+    				</KEY>
+	    		</HASH>
+		    </KEY>
+    	</HASH>
+    	<HASH href="*[2]/*[1]/*[1]"/>
+    </ARRAY>
+
 For more examples see F<t/01_Data-asXML.t>.
 
 =head1 WARNING
@@ -36,10 +55,21 @@ experimental, use on your own risk :-)
 
 There are couple of modules mapping XML to data structures. (L<XML::Compile>,
 L<XML::TreePP>, L<XML::Simple>, ...) but they aim at making data structures
-adapt to XML structure. This defines simple XML tags to represent data structures.
-It makes the serialization to (later also from) XML possible.
+adapt to XML structure. This one defines couple of simple XML tags to represent
+data structures. It makes the serialization to and from XML possible.
+
 For the moment it is an experiment. I plan to use it for passing data
-structures to XSLT for transformations.
+structures as DOM to XSLT for transformations, so that I can match them
+with XPATH similar way how I access them in Perl.
+
+    /HASH/KEY[@name="key"]/VALUE
+    /HASH/KEY[@name="key2"]/ARRAY/*[3]/VALUE
+    /ARRAY/*[1]/VALUE
+    /ARRAY/*[2]/HASH/KEY[@name="key3"]/VALUE
+
+If you are looking for a module to serialize your data, without requirement
+to do so in XML, you should probably better have a look at L<JSON::XS>
+or L<Storable>.
 
 =cut
 
@@ -57,7 +87,7 @@ use MIME::Base64 'encode_base64', 'decode_base64';
 use Encode 'is_utf8';
 use Test::Deep::NoTest 'eq_deeply';
 
-our $VERSION = '0.04';
+our $VERSION = '0.05';
 
 use base 'Class::Accessor::Fast';
 
@@ -558,6 +588,7 @@ order):
     * int, float encoding ? (string enough?)
     * XSD
     * anyone else has an idea?
+    * what to do with blessed? do the same as JSON::XS does?
 
 =head1 BUGS
 

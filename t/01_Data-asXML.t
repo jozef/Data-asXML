@@ -237,18 +237,24 @@ sub main {
 	
 
 	my (%hash1, %hash2, %hash3, $scalar_ref3);
-	$hash1{'info'} = '/me hash1';
-	$hash1{'next'} = \%hash2;
-	$hash1{'prev'} = \%hash3;
-	$hash1{'more'} = \$scalar_ref3;
-	$hash2{'info'} = '/me hash2';
-	$hash2{'next'} = \%hash3;
-	$hash2{'prev'} = \%hash1;
-	$hash2{'more'} = \$scalar_ref3;
-	$hash3{'info'} = '/me hash3';
-	$hash3{'next'} = \%hash1;
-	$hash3{'prev'} = \%hash2;
-	$hash3{'more'} = \$scalar_ref3;
+	%hash1 = (
+		'info' => '/me hash1',
+		'next' => \%hash2,
+		'prev' => \%hash3,
+		'more' => \$scalar_ref3,
+	);
+	%hash2 = (
+		'info' => '/me hash2',
+		'next' => \%hash3,
+		'prev' => \%hash1,
+		'more' => \$scalar_ref3,
+	);
+	%hash3 = (
+		'info' => '/me hash3',
+		'next' => \%hash1,
+		'prev' => \%hash2,
+		'more' => \$scalar_ref3,
+	);
 	push @test_conversions, [
 		[ \%hash1, \%hash2, \%hash3 ],
 		'<ARRAY>'."\n".
@@ -319,6 +325,7 @@ sub main {
 		);
 	}
 	
+	# encoding/decoding with safe_mode on
 	SAFE_MODE: {
 		my $dxml = Data::asXML->new(safe_mode => 1);
 		lives_ok
@@ -331,6 +338,7 @@ sub main {
 		;
 	}
 	
+	# adding namespace to the root element
 	NAME_SPACE {
 		my $dxml = Data::asXML->new(namespace => 1, pretty => 0);
 		eq_or_diff(
