@@ -6,7 +6,7 @@ use warnings;
 use utf8;
 
 #use Test::More 'no_plan';
-use Test::More tests => 50;
+use Test::More tests => 52;
 use Test::Differences;
 use Test::Exception;
 
@@ -291,7 +291,7 @@ sub main {
 	}
 	
 	SAFE_MODE: {
-		$dxml->safe_mode(1);
+		my $dxml = Data::asXML->new(safe_mode => 1);
 		lives_ok
 			{ $dxml->encode({ 'hi' => 'there' }) }
 			'encode with safe_mode on'
@@ -300,6 +300,22 @@ sub main {
 			{ $dxml->decode('<HASH><KEY name="hi"><VALUE>there</VALUE></KEY></HASH>') }
 			'decode with safe_mode on'
 		;
+	}
+	
+	NAME_SPACE {
+		my $dxml = Data::asXML->new(namespace => 1, pretty => 0);
+		eq_or_diff(
+			$dxml->encode({ 'hi' => 'there' })->toString,
+			'<HASH xmlns="http://search.cpan.org/perldoc?Data::asXML"><KEY name="hi"><VALUE>there</VALUE></KEY></HASH>',
+			'encode with namespace "1"',
+		);
+
+		my $dxml2 = Data::asXML->new(namespace => 'wellns', pretty => 0);
+		eq_or_diff(
+			$dxml2->encode({ 'hi' => 'there' })->toString,
+			'<HASH xmlns="wellns"><KEY name="hi"><VALUE>there</VALUE></KEY></HASH>',
+			'encode with namespace "1"',
+		);
 	}
 	
 	return 0;

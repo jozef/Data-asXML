@@ -82,6 +82,14 @@ xml string decode back to data. this two data values are then compared.
 
 Both compares is done using L<Test::Deep::NoTest>::eq_deeply.
 
+=item namespace
+
+(default undef - false)
+
+adds xml:ns attribute to the root element. if C<namespace> is set to 1
+the xml:ns will be L<http://search.cpan.org/perldoc?Data::asXML> otherwise
+it will be the value of C<namespace>.
+
 =back
 
 =cut
@@ -89,6 +97,7 @@ Both compares is done using L<Test::Deep::NoTest>::eq_deeply.
 __PACKAGE__->mk_accessors(qw{
     pretty
     safe_mode
+    namespace
 });
 
 =head1 METHODS
@@ -144,6 +153,10 @@ sub encode {
     
     my $safe_mode = $self->safe_mode;
     $self->safe_mode(0);
+    my $add_namespace = $self->namespace || 0;
+    $add_namespace = "http://search.cpan.org/perldoc?Data::asXML"
+        if $add_namespace eq '1';
+    $self->namespace(0);
     
     state $indent = 0;
     
@@ -286,6 +299,12 @@ sub encode {
         
         # set back the safe mode after all was encoded
         $self->safe_mode($safe_mode);
+    }
+    
+    # add namespace if requested
+    if ($add_namespace) {
+        $where->setAttribute('xmlns' => $add_namespace);
+        $self->namespace($add_namespace);
     }
     
     return $where;
@@ -490,7 +509,6 @@ order):
 =head1 TODO
 
     * int, float encoding ? (string enough?)
-    * allow setting namespace
     * XSD
     * anyone else has an idea?
 

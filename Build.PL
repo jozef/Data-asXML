@@ -16,6 +16,7 @@ my $builder = Module::Build->new(
                        => 0,
         'MIME::Base64' => 0,
         'Encode'       => 0,
+        'Test::Deep::NoTest' => 0,
     },
     build_requires => {
         'Test::More'        => 0,
