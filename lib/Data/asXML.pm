@@ -1,5 +1,7 @@
 package Data::asXML;
 
+=encoding utf-8
+
 =head1 NAME
 
 Data::asXML - convert data structures to/from XML
