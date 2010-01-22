@@ -14,8 +14,7 @@ my $builder = Module::Build->new(
         'XML::LibXML'  => 0,
         'Class::Accessor::Fast'
                        => 0,
-        'MIME::Base64' => 0,
-        'Encode'       => 0,
+        'URI::Escape'  => 0,
         'Test::Deep::NoTest' => 0,
     },
     build_requires => {

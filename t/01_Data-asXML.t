@@ -10,6 +10,8 @@ use Test::More tests => 58;
 use Test::Differences;
 use Test::Exception;
 
+binmode(Test::More->builder->$_ => 'encoding(UTF-8)') for qw(output failure_output todo_output);
+
 BEGIN {
 	use_ok ( 'Data::asXML' ) or exit;
 }
@@ -24,7 +26,7 @@ sub main {
 	my @test_conversions = (
 		# simple
 		['123','<VALUE>123</VALUE>','numeric scalar'],
-		['ščžťľžô', '<VALUE>ščžťľžô</VALUE>', 'utf-8 scalar'],
+		['ščžťľžô', '<VALUE>ščžťľž%F4</VALUE>', 'utf-8 scalar'],
 		['迪拉斯', '<VALUE>迪拉斯</VALUE>', 'another utf-8 scalar'],
 		[undef, '<VALUE type="undef"/>', 'undef'],
 		['','<VALUE></VALUE>','empty string'],
@@ -102,7 +104,7 @@ sub main {
 		# binary
 		[
 			chr(0).chr(1).chr(2).chr(3).chr(253).chr(254).chr(255),
-			'<VALUE type="base64">AAECA/3+/w==</VALUE>',
+			'<VALUE>%00%01%02%03%FD%FE%FF</VALUE>',
 			'binary'
 		],
 		
@@ -118,7 +120,7 @@ sub main {
 		'simple scalar reference'
 	], [
 		$scalar_ref2,
-		'<VALUE type="base64" subtype="ref">aGkgdGhlcmUh/w==</VALUE>',
+		'<VALUE subtype="ref">hi there!%FF</VALUE>',
 		'simple scalar reference to binary'
 	], [
 		$ref_to_scalar_ref,

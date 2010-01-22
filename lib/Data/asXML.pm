@@ -85,8 +85,7 @@ use feature 'state';
 use Carp 'croak';
 use XML::LibXML 'XML_ELEMENT_NODE';
 use Scalar::Util 'blessed';
-use MIME::Base64 'encode_base64', 'decode_base64';
-use Encode 'is_utf8';
+use URI::Escape qw(uri_escape uri_unescape);
 use Test::Deep::NoTest 'eq_deeply';
 
 our $VERSION = '0.05';
@@ -326,13 +325,11 @@ sub encode {
         when ('') {
             $where = $self->_xml->createElement('VALUE');
             if (defined $what) {
-                my $scalar = $what;
-                if ((not is_utf8($scalar, 1)) and ($scalar !~ m/^[[:ascii:]]*$/xms)) {
-                    $scalar = encode_base64($scalar);
-                    $scalar =~ s/\s*$//;
-                    $where->setAttribute('type' => 'base64');
-                }
-                $where->addChild( $self->_xml->createTextNode( $scalar ) )
+                $where->addChild( $self->_xml->createTextNode(
+                    join q(), map {
+                        (/[[:^print:]]/ or q(%) eq $_) ? uri_escape $_ : $_
+                    } split //, $what
+                ) )
             }
             else {
                 # no better way to distinguish between empty string and undef - see http://rt.cpan.org/Public/Bug/Display.html?id=51442
@@ -460,7 +457,7 @@ sub decode {
     given ($xml->nodeName) {
         when ('HASH') {
             if (my $xpath_path = $xml->getAttribute('href')) {
-                my $href_key = $self->_href_key($xpath_path);                
+                my $href_key = $self->_href_key($xpath_path);
                 return $self->{'_href_mapping'}->{$href_key} || die 'invalid reference - '.$href_key.' ('.$xml->toString.')';
             }
             
@@ -531,8 +528,7 @@ sub decode {
             
             given ($xml->getAttribute('type')) {
                 when ('undef')  { $value = undef; }
-                when ('base64') { $value = decode_base64($xml->textContent) }
-                default         { $value = $xml->textContent }
+                default         { $value = uri_unescape $xml->textContent }
             }
             return \$value
                 if ($xml->getAttribute('subtype') ~~ 'ref');
