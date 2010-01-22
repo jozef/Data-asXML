@@ -327,7 +327,7 @@ sub encode {
             $where = $self->_xml->createElement('VALUE');
             if (defined $what) {
                 my $scalar = $what;
-                if ((not is_utf8($scalar, 1)) and ($scalar !~ m/^[[:ascii:]]*$/xms)) {
+                if ((not is_utf8($scalar, 1)) and ($scalar !~ m/\A [[:ascii:]]* \Z/xms)) {
                     $scalar = encode_base64($scalar);
                     $scalar =~ s/\s*$//;
                     $where->setAttribute('type' => 'base64');

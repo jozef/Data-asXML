@@ -6,7 +6,7 @@ use warnings;
 use utf8;
 
 #use Test::More 'no_plan';
-use Test::More tests => 58;
+use Test::More tests => 60;
 use Test::Differences;
 use Test::Exception;
 
@@ -103,6 +103,12 @@ sub main {
 		[
 			chr(0).chr(1).chr(2).chr(3).chr(253).chr(254).chr(255),
 			'<VALUE type="base64">AAECA/3+/w==</VALUE>',
+			'binary'
+		],
+		# binary
+		[
+			chr(0).chr(1)."\n".chr(253).chr(254).chr(255),
+			'<VALUE type="base64">AAEK/f7/</VALUE>',
 			'binary'
 		],
 		
