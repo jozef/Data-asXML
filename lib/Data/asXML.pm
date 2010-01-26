@@ -87,6 +87,8 @@ use XML::LibXML 'XML_ELEMENT_NODE';
 use Scalar::Util 'blessed';
 use URI::Escape qw(uri_escape uri_unescape);
 use Test::Deep::NoTest 'eq_deeply';
+use XML::Char;
+use MIME::Base64 'decode_base64';
 
 our $VERSION = '0.05';
 
@@ -325,11 +327,14 @@ sub encode {
         when ('') {
             $where = $self->_xml->createElement('VALUE');
             if (defined $what) {
-                $where->addChild( $self->_xml->createTextNode(
-                    join q(), map {
+                # uri escape if it contains invalid XML characters
+                if (not XML::Char->valid($what)) {
+                    $what = join q(), map {
                         (/[[:^print:]]/ or q(%) eq $_) ? uri_escape $_ : $_
-                    } split //, $what
-                ) )
+                    } split //, $what;
+                    $where->setAttribute('type' => 'uriEscape');
+                }
+                $where->addChild( $self->_xml->createTextNode( $what ) );
             }
             else {
                 # no better way to distinguish between empty string and undef - see http://rt.cpan.org/Public/Bug/Display.html?id=51442
@@ -527,9 +532,11 @@ sub decode {
             pop @{$self->{'_cur_xpath_steps'}};
             
             given ($xml->getAttribute('type')) {
-                when ('undef')  { $value = undef; }
-                default         { $value = uri_unescape $xml->textContent }
-            }
+                when ('undef')      { $value = undef; }
+                when ('base64')     { $value = decode_base64($xml->textContent) }    # left for backwards compatibility, will be removed one day...
+                when ('uriEscape')  { $value = uri_unescape $xml->textContent; }
+                default             { $value = $xml->textContent }
+            };
             return \$value
                 if ($xml->getAttribute('subtype') ~~ 'ref');
             return $value;

@@ -6,11 +6,11 @@ use warnings;
 use utf8;
 
 #use Test::More 'no_plan';
-use Test::More tests => 58;
+use Test::More tests => 64;
 use Test::Differences;
 use Test::Exception;
 
-binmode(Test::More->builder->$_ => 'encoding(UTF-8)') for qw(output failure_output todo_output);
+binmode(Test::More->builder->$_ => q(encoding(:UTF-8))) for qw(output failure_output todo_output);
 
 BEGIN {
 	use_ok ( 'Data::asXML' ) or exit;
@@ -26,8 +26,9 @@ sub main {
 	my @test_conversions = (
 		# simple
 		['123','<VALUE>123</VALUE>','numeric scalar'],
-		['ščžťľžô', '<VALUE>ščžťľž%F4</VALUE>', 'utf-8 scalar'],
+		['ščžťľžô', '<VALUE>ščžťľžô</VALUE>', 'utf-8 scalar'],
 		['迪拉斯', '<VALUE>迪拉斯</VALUE>', 'another utf-8 scalar'],
+		['Österreich', '<VALUE>Österreich</VALUE>', 'utf-8 Austria'],
 		[undef, '<VALUE type="undef"/>', 'undef'],
 		['','<VALUE></VALUE>','empty string'],
 		
@@ -100,13 +101,20 @@ sub main {
 		
 		# wird data
 		['|<"><">&|','<VALUE>|&lt;"&gt;&lt;"&gt;&amp;|</VALUE>','xml chars'],
+		[q"|~!@#$%^*()_-+{}|:?[]\;',./`|",q"<VALUE>|~!@#$%^*()_-+{}|:?[]\;',./`|</VALUE>",'other chars'],
 		
 		# binary
 		[
 			chr(0).chr(1).chr(2).chr(3).chr(253).chr(254).chr(255),
-			'<VALUE>%00%01%02%03%FD%FE%FF</VALUE>',
+			'<VALUE type="uriEscape">%00%01%02%03%FD%FE%FF</VALUE>',
 			'binary'
 		],
+		[
+			chr(1).chr(2).chr(0),
+			'<VALUE type="uriEscape">%01%02%00</VALUE>',
+			'binary'
+		],
+		
 		
 	);
 	
@@ -120,7 +128,7 @@ sub main {
 		'simple scalar reference'
 	], [
 		$scalar_ref2,
-		'<VALUE subtype="ref">hi there!%FF</VALUE>',
+		'<VALUE type="uriEscape" subtype="ref">hi there!%FF</VALUE>',
 		'simple scalar reference to binary'
 	], [
 		$ref_to_scalar_ref,
