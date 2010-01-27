@@ -12,11 +12,13 @@ my $builder = Module::Build->new(
     requires => {
         'Carp'         => 0,
         'XML::LibXML'  => 0,
+        'Scalar::Util' => 0,
         'Class::Accessor::Fast'
                        => 0,
-        'MIME::Base64' => 0,
-        'Encode'       => 0,
+        'URI::Escape'  => 0,
         'Test::Deep::NoTest' => 0,
+        'MIME::Base64' => 0,
+        'XML::Char'    => 0,
     },
     build_requires => {
         'Test::More'        => 0,
