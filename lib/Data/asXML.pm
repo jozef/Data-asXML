@@ -51,7 +51,7 @@ For more examples see F<t/01_Data-asXML.t>.
 
 =head1 WARNING
 
-experimental, use on your own risk :-)
+experimental, use at your own risk :-)
 
 =head1 DESCRIPTION
 
@@ -90,7 +90,7 @@ use Test::Deep::NoTest 'eq_deeply';
 use XML::Char;
 use MIME::Base64 'decode_base64';
 
-our $VERSION = '0.05';
+our $VERSION = '0.06';
 
 use base 'Class::Accessor::Fast';
 
@@ -198,9 +198,8 @@ sub encode {
         $self->{'_cur_xpath_steps'} = [];
     }
     
-    given (ref $what) {
-        # create DOM for hash element
-        when ('HASH') {
+    # create DOM for hash element
+    if (ref($what) eq 'HASH') {
             $where = $self->_xml->createElement('HASH');
             $indent++;
             push @{$self->{'_cur_xpath_steps'}}, $pos;
@@ -220,7 +219,8 @@ sub encode {
             $self->{'_href_mapping'}->{$what} = $self->_xpath_steps_string();
             
             my $key_pos = 0;
-            while (my ($key, $value) = each %{$what}) {
+            foreach my $key (sort keys %{$what}) {
+                my $value = $what->{$key};
                 $key_pos++;
                 $self->_indent($where, $indent);
                 $indent++;
@@ -242,8 +242,8 @@ sub encode {
             $self->_indent($where, $indent);
             pop @{$self->{'_cur_xpath_steps'}};
         }
-        # create DOM for array element
-        when ('ARRAY') {
+    # create DOM for array element
+    elsif (ref($what) eq 'ARRAY') {
             $where = $self->_xml->createElement('ARRAY');
             $indent++;
             push @{$self->{'_cur_xpath_steps'}}, $pos;
@@ -274,7 +274,7 @@ sub encode {
             pop @{$self->{'_cur_xpath_steps'}};
         }
         # create element for pure reference
-        when ('REF') {
+    elsif (ref($what) eq 'REF') {
             $where = $self->_xml->createElement('REF');
             $indent++;
             push @{$self->{'_cur_xpath_steps'}}, $pos;
@@ -301,7 +301,7 @@ sub encode {
             pop @{$self->{'_cur_xpath_steps'}};
         }
         # scalar reference
-        when ('SCALAR') {
+    elsif (ref($what) eq 'SCALAR') {
             push @{$self->{'_cur_xpath_steps'}}, $pos;
             # already encoded reference
             if (exists $self->{'_href_mapping'}->{$what}) {
@@ -323,8 +323,8 @@ sub encode {
 
             pop @{$self->{'_cur_xpath_steps'}};
         }
-        # create text node
-        when ('') {
+    # create text node
+    elsif (ref($what) eq '') {
             $where = $self->_xml->createElement('VALUE');
             if (defined $what) {
                 # uri escape if it contains invalid XML characters
@@ -343,9 +343,8 @@ sub encode {
                 
         }
         #
-        default {
+    else {
             die 'unknown reference - '.$what;
-        }
     }
 
     # cleanup at the end
@@ -459,8 +458,7 @@ sub decode {
         return $self->decode($root_element);
     }
     
-    given ($xml->nodeName) {
-        when ('HASH') {
+    if ($xml->nodeName eq 'HASH') {
             if (my $xpath_path = $xml->getAttribute('href')) {
                 my $href_key = $self->_href_key($xpath_path);
                 return $self->{'_href_mapping'}->{$href_key} || die 'invalid reference - '.$href_key.' ('.$xml->toString.')';
@@ -487,7 +485,7 @@ sub decode {
             pop @{$self->{'_cur_xpath_steps'}};
             return \%data;
         }
-        when ('ARRAY') {
+    elsif ($xml->nodeName eq 'ARRAY') {
             if (my $xpath_path = $xml->getAttribute('href')) {
                 my $href_key = $self->_href_key($xpath_path);
                 
@@ -504,7 +502,7 @@ sub decode {
             pop @{$self->{'_cur_xpath_steps'}};
             return \@data;
         }
-        when ('REF') {
+    elsif ($xml->nodeName eq 'REF') {
             if (my $xpath_path = $xml->getAttribute('href')) {
                 my $href_key = $self->_href_key($xpath_path);
                 return $self->{'_href_mapping'}->{$href_key} || die 'invalid reference - '.$href_key.' ('.$xml->toString.')';
@@ -520,7 +518,7 @@ sub decode {
             pop @{$self->{'_cur_xpath_steps'}};
             return \$data;
         }
-        when ('VALUE') {
+    elsif ($xml->nodeName eq 'VALUE') {
             if (my $xpath_path = $xml->getAttribute('href')) {
                 my $href_key = $self->_href_key($xpath_path);                
                 return $self->{'_href_mapping'}->{$href_key} || die 'invalid reference - '.$href_key.' ('.$xml->toString.')';
@@ -531,19 +529,22 @@ sub decode {
             $self->{'_href_mapping'}->{$self->_xpath_steps_string()} = \$value;
             pop @{$self->{'_cur_xpath_steps'}};
             
-            given ($xml->getAttribute('type')) {
-                when ('undef')      { $value = undef; }
-                when ('base64')     { $value = decode_base64($xml->textContent) }    # left for backwards compatibility, will be removed one day...
-                when ('uriEscape')  { $value = uri_unescape $xml->textContent; }
-                default             { $value = $xml->textContent }
-            };
+            my $type = $xml->getAttribute('type') // '';
+            my $subtype = $xml->getAttribute('subtype') // '';
+            if ($type eq 'undef')
+                { $value = undef; }
+            elsif ($type eq 'base64')
+                { $value = decode_base64($xml->textContent) }    # left for backwards compatibility, will be removed one day...
+            elsif ($type eq 'uriEscape')
+                { $value = uri_unescape $xml->textContent; }
+            else
+                { $value = $xml->textContent }
             return \$value
-                if ($xml->getAttribute('subtype') ~~ 'ref');
+                if ($subtype eq 'ref');
             return $value;
         }
-        default {
-            die 'invalid (unknown) element "'.$xml->toString.'"'
-        }
+    else {
+        die 'invalid (unknown) element "'.$xml->toString.'"'
     }
     
 }
@@ -560,9 +561,11 @@ sub _href_key {
     
     my $i = 0;
     while ($i < @xpath_steps) {
-        given ($xpath_steps[$i]) {
-            when ('..') { pop @path }
-            default     { push @path, $_ }
+        if ($xpath_steps[$i] eq '..') {
+            pop(@path);
+        }
+        else {
+            push(@path, $xpath_steps[$i]);
         }
         $i++;
     }
@@ -580,9 +583,9 @@ Jozef Kutej, C<< <jkutej at cpan.org> >>
 
 =head1 CONTRIBUTORS
  
-The following people have contributed to the Sys::Path by commiting their
+The following people have contributed to the Sys::Path by committing their
 code, sending patches, reporting bugs, asking questions, suggesting useful
-advices, nitpicking, chatting on IRC or commenting on my blog (in no particular
+advice, nitpicking, chatting on IRC or commenting on my blog (in no particular
 order):
 
     Lars Dɪᴇᴄᴋᴏᴡ 迪拉斯

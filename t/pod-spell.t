@@ -24,5 +24,9 @@ add_stopwords(qw(
 	DOM
 	XML
 	XSLT
+	TODO
+	XPATH
+	blog
+	xml
 ));
 all_pod_files_spelling_ok();

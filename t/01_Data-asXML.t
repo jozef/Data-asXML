@@ -6,7 +6,7 @@ use warnings;
 use utf8;
 
 #use Test::More 'no_plan';
-use Test::More tests => 64;
+use Test::More tests => 62;
 use Test::Differences;
 use Test::Exception;
 
@@ -119,16 +119,11 @@ sub main {
 	
 	# scalar reference
 	my $scalar_ref  = \"hi there!";
-	my $scalar_ref2 = \("hi there!".chr(255));
 	my $ref_to_scalar_ref = \$scalar_ref;
 	push @test_conversions, [
 		$scalar_ref,
 		'<VALUE subtype="ref">hi there!</VALUE>',
 		'simple scalar reference'
-	], [
-		$scalar_ref2,
-		'<VALUE type="uriEscape" subtype="ref">hi there!%FF</VALUE>',
-		'simple scalar reference to binary'
 	], [
 		$ref_to_scalar_ref,
 		'<REF>'."\n".
@@ -271,15 +266,24 @@ sub main {
 		'		<KEY name="info">'."\n".
 		'			<VALUE>/me hash1</VALUE>'."\n".
 		'		</KEY>'."\n".
+		'		<KEY name="more">'."\n".
+		'			<VALUE type="undef" subtype="ref"/>'."\n".
+		'		</KEY>'."\n".
 		'		<KEY name="next">'."\n".
 		'			<HASH>'."\n".
 		'				<KEY name="info">'."\n".
 		'					<VALUE>/me hash2</VALUE>'."\n".
 		'				</KEY>'."\n".
+		'				<KEY name="more">'."\n".
+		'					<VALUE href="../../../*[2]/*[1]"/>'."\n".
+		'				</KEY>'."\n".
 		'				<KEY name="next">'."\n".
 		'					<HASH>'."\n".
 		'						<KEY name="info">'."\n".
 		'							<VALUE>/me hash3</VALUE>'."\n".
+		'						</KEY>'."\n".
+		'						<KEY name="more">'."\n".
+		'							<VALUE href="../../../../../*[2]/*[1]"/>'."\n".
 		'						</KEY>'."\n".
 		'						<KEY name="next">'."\n".
 		'							<HASH href="../../../../../../*[1]"/>'."\n".
@@ -287,28 +291,19 @@ sub main {
 		'						<KEY name="prev">'."\n".
 		'							<HASH href="../../../../*[1]"/>'."\n".
 		'						</KEY>'."\n".
-		'						<KEY name="more">'."\n".
-		'							<VALUE type="undef" subtype="ref"/>'."\n".
-		'						</KEY>'."\n".
 		'					</HASH>'."\n".
 		'				</KEY>'."\n".
 		'				<KEY name="prev">'."\n".
 		'					<HASH href="../../../../*[1]"/>'."\n".
 		'				</KEY>'."\n".
-		'				<KEY name="more">'."\n".
-		'					<VALUE href="../*[2]/*[1]/*[4]/*[1]"/>'."\n".
-		'				</KEY>'."\n".
 		'			</HASH>'."\n".
 		'		</KEY>'."\n".
 		'		<KEY name="prev">'."\n".
-		'			<HASH href="../*[2]/*[1]/*[2]/*[1]"/>'."\n".
-		'		</KEY>'."\n".
-		'		<KEY name="more">'."\n".
-		'			<VALUE href="../*[2]/*[1]/*[2]/*[1]/*[4]/*[1]"/>'."\n".
+		'			<HASH href="../*[3]/*[1]/*[3]/*[1]"/>'."\n".
 		'		</KEY>'."\n".
 		'	</HASH>'."\n".
-		'	<HASH href="*[1]/*[2]/*[1]"/>'."\n".
-		'	<HASH href="*[1]/*[2]/*[1]/*[2]/*[1]"/>'."\n".
+		'	<HASH href="*[1]/*[3]/*[1]"/>'."\n".
+		'	<HASH href="*[1]/*[3]/*[1]/*[3]/*[1]"/>'."\n".
 		'</ARRAY>',
 		'three hashes referencing to each other'
 	];
@@ -320,7 +315,7 @@ sub main {
 		my $data  = $dxml2->decode($test->[1]);
 
 		# encode
-		eq_or_diff(
+		is(
 			$dom->toString,
 			$test->[1],
 			'encode() - '.$test->[2],

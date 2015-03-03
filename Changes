@@ -1,5 +1,10 @@
 Revision history for Data-asXML
 
+0.06    3 March 2015
+    - sorted hash keys for XML
+    - test fixes
+    - replace ~~ and given {}
+
 0.05    17 Nov 2009
     - double, circular (HASH, ARRAY, VALUE) reference en/decoding
     - SCALAR reference en/decoding

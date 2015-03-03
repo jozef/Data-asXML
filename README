@@ -44,7 +44,7 @@ SYNOPSIS
     For more examples see t/01_Data-asXML.t.
 
 WARNING
-    experimental, use on your own risk :-)
+    experimental, use at your own risk :-)
 
 DESCRIPTION
     There are couple of modules mapping XML to data structures.
@@ -106,9 +106,9 @@ AUTHOR
     Jozef Kutej, `<jkutej at cpan.org>'
 
 CONTRIBUTORS
-    The following people have contributed to the Sys::Path by commiting
+    The following people have contributed to the Sys::Path by committing
     their code, sending patches, reporting bugs, asking questions,
-    suggesting useful advices, nitpicking, chatting on IRC or commenting on
+    suggesting useful advice, nitpicking, chatting on IRC or commenting on
     my blog (in no particular order):
 
         Lars Dɪᴇᴄᴋᴏᴡ 迪拉斯

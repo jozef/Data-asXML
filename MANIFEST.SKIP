@@ -32,3 +32,5 @@
 .*\.tar\.gz
 
 ^Data-asXML-.*
+^MYMETA\.yml$
+^MYMETA\.json$

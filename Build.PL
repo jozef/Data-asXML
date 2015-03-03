@@ -9,6 +9,7 @@ my $builder = Module::Build->new(
     license             => 'perl',
     dist_author         => 'Jozef Kutej <jkutej@cpan.org>',
     dist_version_from   => 'lib/Data/asXML.pm',
+    configure_requires  => { 'Module::Build' => 0.42 },
     requires => {
         'Carp'         => 0,
         'XML::LibXML'  => 0,
@@ -26,9 +27,7 @@ my $builder = Module::Build->new(
         'Test::Exception'   => 0,
     },
     add_to_cleanup      => [ 'Data-asXML-*' ],
-    create_makefile_pl => 'traditional',
     create_readme       => 1,
-    sign                => 1,
     meta_merge => {
         resources => {
             repository => 'git://github.com/jozef/Data-asXML.git',
