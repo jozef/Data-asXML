@@ -90,7 +90,7 @@ use Test::Deep::NoTest 'eq_deeply';
 use XML::Char;
 use MIME::Base64 'decode_base64';
 
-our $VERSION = '0.06';
+our $VERSION = '0.07';
 
 use base 'Class::Accessor::Fast';
 
@@ -131,6 +131,7 @@ __PACKAGE__->mk_accessors(qw{
     pretty
     safe_mode
     namespace
+    namespace_prefix
 });
 
 =head1 METHODS
@@ -170,6 +171,22 @@ sub _indent {
         if $self->pretty;
 }
 
+sub _createElement {
+    my $self = shift;
+    my $name = shift;
+    my $namespace        = $self->namespace;
+    my $namespace_prefix = $self->namespace_prefix;
+
+    $name = join(':',$namespace_prefix,$name)
+        if $namespace_prefix;
+
+    if ($namespace) {
+        return $self->_xml->createElementNS( $namespace, $name );
+    }
+    else {
+        return $self->_xml->createElement($name);
+    }
+}
 
 =head2 encode($what)
 
@@ -190,9 +207,11 @@ sub encode {
     $add_namespace = "http://search.cpan.org/perldoc?Data::asXML"
         if $add_namespace eq '1';
     $self->namespace(0);
+    $self->namespace($add_namespace)
+        if $add_namespace;
     
     state $indent = 0;
-    
+
     if (not $self->{'_cur_xpath_steps'}) {
         $self->{'_href_mapping'}    = {};
         $self->{'_cur_xpath_steps'} = [];
@@ -200,7 +219,7 @@ sub encode {
     
     # create DOM for hash element
     if (ref($what) eq 'HASH') {
-            $where = $self->_xml->createElement('HASH');
+            $where = $self->_createElement('HASH');
             $indent++;
             push @{$self->{'_cur_xpath_steps'}}, $pos;
             # already encoded reference
@@ -225,7 +244,7 @@ sub encode {
                 $self->_indent($where, $indent);
                 $indent++;
 
-                my $el = $self->_xml->createElement('KEY');
+                my $el = $self->_createElement('KEY');
                 push @{$self->{'_cur_xpath_steps'}}, $key_pos;
                 $self->_indent($el, $indent);
                 $el->setAttribute('name', $key);
@@ -244,7 +263,7 @@ sub encode {
         }
     # create DOM for array element
     elsif (ref($what) eq 'ARRAY') {
-            $where = $self->_xml->createElement('ARRAY');
+            $where = $self->_createElement('ARRAY');
             $indent++;
             push @{$self->{'_cur_xpath_steps'}}, $pos;
             # already encoded reference
@@ -275,7 +294,7 @@ sub encode {
         }
         # create element for pure reference
     elsif (ref($what) eq 'REF') {
-            $where = $self->_xml->createElement('REF');
+            $where = $self->_createElement('REF');
             $indent++;
             push @{$self->{'_cur_xpath_steps'}}, $pos;
             # already encoded reference
@@ -305,7 +324,7 @@ sub encode {
             push @{$self->{'_cur_xpath_steps'}}, $pos;
             # already encoded reference
             if (exists $self->{'_href_mapping'}->{$what}) {
-                $where = $self->_xml->createElement('VALUE');
+                $where = $self->_createElement('VALUE');
                 $where->setAttribute(
                     'href' =>
                     $self->_make_relative_xpath(
@@ -325,7 +344,7 @@ sub encode {
         }
     # create text node
     elsif (ref($what) eq '') {
-            $where = $self->_xml->createElement('VALUE');
+            $where = $self->_createElement('VALUE');
             if (defined $what) {
                 # uri escape if it contains invalid XML characters
                 if (not XML::Char->valid($what)) {
@@ -364,13 +383,7 @@ sub encode {
         # set back the safe mode after all was encoded
         $self->safe_mode($safe_mode);
     }
-    
-    # add namespace if requested
-    if ($add_namespace) {
-        $where->setAttribute('xmlns' => $add_namespace);
-        $self->namespace($add_namespace);
-    }
-    
+
     return $where;
 }
 

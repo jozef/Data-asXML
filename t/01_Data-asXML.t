@@ -347,14 +347,14 @@ sub main {
 		my $dxml = Data::asXML->new(namespace => 1, pretty => 0);
 		eq_or_diff(
 			$dxml->encode({ 'hi' => 'there' })->toString,
-			'<HASH xmlns="http://search.cpan.org/perldoc?Data::asXML"><KEY name="hi"><VALUE>there</VALUE></KEY></HASH>',
+			'<HASH xmlns="http://search.cpan.org/perldoc?Data::asXML"><KEY xmlns="http://search.cpan.org/perldoc?Data::asXML" name="hi"><VALUE xmlns="http://search.cpan.org/perldoc?Data::asXML">there</VALUE></KEY></HASH>',
 			'encode with namespace "1"',
 		);
 
-		my $dxml2 = Data::asXML->new(namespace => 'wellns', pretty => 0);
+		my $dxml2 = Data::asXML->new(namespace => 'wellns', namespace_prefix => 'w', pretty => 0);
 		eq_or_diff(
 			$dxml2->encode({ 'hi' => 'there' })->toString,
-			'<HASH xmlns="wellns"><KEY name="hi"><VALUE>there</VALUE></KEY></HASH>',
+			'<w:HASH xmlns:w="wellns"><w:KEY xmlns:w="wellns" name="hi"><w:VALUE xmlns:w="wellns">there</w:VALUE></w:KEY></w:HASH>',
 			'encode with namespace "1"',
 		);
 	}
